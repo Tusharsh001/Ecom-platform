@@ -23,7 +23,7 @@ This project is a full-stack e-commerce web application built using Java, Spring
 • Real-time stock updates
 • Product availability validation
 
-✔ AI-Assisted Help Desk
+✔ AI-Assisted Help Desk(yet to be added)
 • Order status inquiries via AI
 • Automated support responses
 • Natural language interaction
@@ -54,7 +54,6 @@ Maven
 
 Git / GitHub
 
-Docker (optional deployment)
 
 🏗 Architecture Overview
 
@@ -67,8 +66,6 @@ User Service
 Cart Service
 
 Inventory Service
-
-Checkout/Payment Service
 
 AI Integration Layer
 
@@ -83,6 +80,6 @@ Maven
 
 MySQL
 
-Node.js (for frontend)
+React.js (for frontend)
 
 Git
