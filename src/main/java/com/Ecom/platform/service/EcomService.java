@@ -2,30 +2,44 @@ package com.Ecom.platform.service;
 
 import com.Ecom.platform.model.Product;
 import com.Ecom.platform.repo.EcomRepo;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.chat.prompt.PromptTemplate;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.*;
 import java.util.List;
 
 @Service
+@Transactional
 public class EcomService {
 
     @Autowired
     private EcomRepo repo;
 
+    @Autowired
+    private ChatClient chatClient;
+
+    @Autowired
+    VectorStore vectorStore;
+
+
 
 
     /// get all product
     public List<Product> getAllProducts() {
+
         return repo.findAll();
     }
 
     public Product getProductById(int id) {
+
         return repo.findById(id).orElse(new Product());
     }
 
@@ -35,8 +49,29 @@ public class EcomService {
         product.setImageName(image.getOriginalFilename());
         product.setImageType(image.getContentType());
         product.setImageData(image.getBytes());
-        return repo.save(product);
+        Product Savedproduct= repo.save(product);
+        String Content=String.format("""
+                Product Name: %s
+                Description: %s
+                Brand: %s
+                Category: %s
+                Price: %.2f
+                Release Date: %s
+                Strock: %d
+                """,
+                Savedproduct.getName(),
+                Savedproduct.getDescription(),
+                Savedproduct.getBrand(),
+                Savedproduct.getCategory(),
+                Savedproduct.getPrice(),
+                Savedproduct.getReleaseDate(),
+                Savedproduct.getStockQuantity());
 
+        Document document=new Document(UUID.randomUUID().toString(),
+                Content,
+                Map.of("productId",String.valueOf(Savedproduct.getId())));
+        vectorStore.add(List.of(document));
+      return Savedproduct;
     }
 
     ///  updading the product
@@ -44,7 +79,31 @@ public class EcomService {
         product.setImageName(imageFile.getOriginalFilename());
         product.setImageType(imageFile.getContentType());
         product.setImageData(imageFile.getBytes());
-        return repo.save(product);
+        Product Savedproduct =repo.save(product);
+
+        String Content=String.format("""
+                Product Name: %s
+                Description: %s
+                Brand: %s
+                Category: %s
+                Price: %.2f
+                Release Date: %s
+                Strock: %d
+                """,
+                Savedproduct.getName(),
+                Savedproduct.getDescription(),
+                Savedproduct.getBrand(),
+                Savedproduct.getCategory(),
+                Savedproduct.getPrice(),
+                Savedproduct.getReleaseDate(),
+                Savedproduct.getStockQuantity());
+
+        Document document=new Document(UUID.randomUUID().toString(),
+                                       Content,
+                                    Map.of("productId",String.valueOf(Savedproduct.getId())));
+        vectorStore.add(List.of(document));
+
+        return Savedproduct;
     }
 
     /// deleting a product
@@ -53,8 +112,27 @@ public class EcomService {
         repo.deleteById(id);
     }
 
+    @Transactional
     public List<Product>searchProduct(String keyword) {
         return repo.searchProduct(keyword);
+    }
+
+
+    ///  AI PART______-----------------------------____________________
+    @Transactional
+    public  String generateDescription(String name, String category) {
+        String message= """
+                Write a conscise and professional product description for and e-commerce listing. 
+                 the name of the product is {name} and belong to the the category {category}.
+                 
+                 Keep it simple, engaging, and highlight its primary features or benefits.
+                 Avoid technical jargon and keep it customer-friendly.
+                 Limit the description to 250 characters maximum.
+                 
+                """;
+        PromptTemplate template=new PromptTemplate(message);
+        Prompt prompt=template.create(Map.of("name",name,"category",category));
+        return chatClient.prompt(prompt).call().content();
     }
 }
 
